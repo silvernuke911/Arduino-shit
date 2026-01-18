@@ -41,24 +41,24 @@ float sensor_voltage = adc * (5.0 / 1023.0);
 //============================================================================
 // Timing & sampling
 //============================================================================
-const int SAMPLES_PER_READING = 50;
-float ppmReadings[SAMPLES_PER_READING] = {0};
-int readingIndex = 0;
-unsigned long lastSampleTime = 0;
-const unsigned long WARNING_DISPLAY_TIME = 3000;
-const unsigned long RECALIBRATION_INTERVAL = 300000;  // 5 mins = 300,000 ms
-const float SENSOR_VOLTAGE_THRESHOLD = 1.0; // look at test/co2_testing.ipynb
+const int SAMPLES_PER_READING = 50;                     // 50 Hz air sampling rate.
+float ppmReadings[SAMPLES_PER_READING] = {0};           // List of data (last 50 samples)
+int readingIndex = 0;                                   // Index start of reading
+unsigned long lastSampleTime = 0;                       // Setting init last sample time
+const unsigned long WARNING_DISPLAY_TIME = 3000;        // Duration of warning display
+const unsigned long RECALIBRATION_INTERVAL = 300000;    // 5 mins = 300,000 ms
 
 //============================================================================
 // Flags & states
 //============================================================================
-bool isPreheated      = false;
-bool isWarningActive  = false;
-bool recalibrationDue = false;
-bool skipPreheating   = false;
-unsigned long lastCalibrationTime = 0;
+bool isPreheated      = false;              // Setting whether the device is preheated
+bool isWarningActive  = false;              // Setting on the status of the warning
+bool recalibrationDue = false;              // Setting on the due of the recalibration
+bool skipPreheating   = false;              // Setting whether to skip preheating (Do not set to true on production)
+unsigned long lastCalibrationTime = 0;      // Setting init last recalibration time
 
 //============================================================================
 // Thresholds
 //============================================================================
-const int PPM_THRESHOLD = 2000;
+const int PPM_THRESHOLD = 2000;             //arbitrary, you can set to lower if needed. 1500 ppm would do
+const float SENSOR_VOLTAGE_THRESHOLD = 1.0; // look at test/co2_testing.ipynb on why this is the case.
