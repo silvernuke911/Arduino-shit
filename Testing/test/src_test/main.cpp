@@ -56,20 +56,15 @@
 //      Warning LED-> D13   | 
 //
 //----------------------------------------------------------------------------
-//      VERSION : 1.5.4
+//      VERSION : 1.5.1
 //      DATE    : January 17, 2026
 //      AUTHOR  : Silvernuke911
 //      
-//      "Mors vincit omnia, usque ad finem vitae"
+//      "Mors vincit omnia"
 //
 //============================================================================
 // TODO: Add manual recalibration button.
 //       Arduino house casing
-//		Stabilize signal drift (sensor readings drift from baseline over time)
-//		Cannot stay stable for a long time. Triggers the warning system 
-//      due to drift. Solution: either regular recalibration (plus rolling average)
-// 		or forced recalibration when measured R0 is stable for 1 minute and deviates
-//      from original R0 by
 //
 //============================================================================
 
@@ -77,11 +72,11 @@
 // LIBRARY INCLUSIONS
 //============================================================================
 #include <Arduino.h>
-#include <globals.h>
-#include <utils.h>
-#include <misc.h>
-#include <calib.h>
-#include <response.h>
+#include "globals.h"
+#include "utils.h"
+#include "misc.h"
+#include "calib.h"
+#include "response.h"
 
 //============================================================================
 // INITIALIZATIONS
@@ -94,10 +89,9 @@ void setup() {
     initializeSensorArray();        // Initializing sensors
     displayStartupMessage();        // Display device name and group name
     performSensorPreheating();      // 20 second mandatory preheating for MQ135 Sensor
-	originalR0 = R0;				// calibrate original R0 reading for sensor.
     calibrateInitWaiting();         // Calibration wating time for user
     calibrateSensor();              // Calibrate sensor
-    lastCalibrationTime = millis(); // Start calibration timers
+    lastCalibrationTime = millis(); // Start calibration timer
     displaySystemReady();           // user ready display
     initializeSensorTiming();       // Initializing timing of sensor for moving average
     performInitialDiagnostics();    // Diagnostic information
@@ -115,7 +109,7 @@ void loop() {
     if (millis() - lastProcessTime >= 1000) {               // if last process time was a second ago, run subroutine below
         lastProcessTime = millis();                         // set last process time
         checkRecalibration();                               // check whether 5 mins has passed since last recalibration    
-		MQ135SensorDirectData();			    			// Update sensor direct analog and digital data.
+
         float ppm = getAveragePPM();                        // get the current ppm reading
         int qualityLevel = getAirQualityLevel(ppm);         // get the air quality level
         String qualityText = getQualityText(qualityLevel);  // turn that to text
@@ -127,14 +121,12 @@ void loop() {
             performRegularRecalibration();                  // if warning systems are not running (to not interfere in emergencies)
         }                                                   // if all are satisfied, recalibrate device (assume 400-700 ppm air)
 
-        if (isAboveThreshold || (sensor_voltage 			// if ppm is above ppm danger (active )threshold or above raw sensor threshold
-					> SENSOR_VOLTAGE_THRESHOLD)) {          // (passive failsafe), the routine:
+        if (isAboveThreshold) {                             // if ppm level is above threshold
             handleWarningState(ppm, qualityText);           // activate warning systems
-        } else {											// otherwise
-            handleNormalState(ppm, qualityText);            // do normal processes (display ppm, close systems)
+        } else {
+            handleNormalState(ppm, qualityText);            // do normal processes (display ppm, cloase systems)
         }
 
         logSensorData(ppm, qualityText);                    // sensor data logging.
-		debugSensor();										// data debugging.
     }
 }
