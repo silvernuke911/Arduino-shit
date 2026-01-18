@@ -216,3 +216,25 @@ void quickRecalibrationCheck() {
 		Serial.println("WARNING: Sensor drift!");
 	}
 }
+
+//=======================================================================
+// Some caution on the MQ135 sensor. It's an ass sensor to work with.
+// It performs well when needed, sensitive enough to detect the change 
+// of air quality from a person's breath. But it sucks!
+// It returns a voltage from 0 to 5 volts. This voltage can be transformed 
+// to resistanceRS using the formula from the data sheet. However, it needs 
+// a base resistance R0 to calculate the PPM levels. And the thing is, 
+// the RS//R0 graph is different for every gas, and the data sheet does
+// no help at all, the graph isn't even that good. So I had to empirically
+// test the shit out of a lot of values to come up with the CO2 graph.
+
+// That would have been okay, if the sensor didn't randomly fucking drift all the time. 
+// It would output  0.1 V one moment, then for no apparent reason, the sensor just 
+// drifts to 0.2V and to 0.3V, even with no apparent air quality change. It has different 
+// base stable values every few minutes, thus fucking with the initial calibration. 
+// The system is always  triggered for no reason even in clean air because of sensor drift. 
+// I had tried many solutions for this problem, such as rolling average for 
+// random spikes. But I cannot solve the sensor drift. Either you change your 
+// baseline R0 every time it is stable, or recalibrate at regular intervals, and that 
+// wouldn't do shit either because the drift can be severe even at 2 minutes.
+// This has been a veritable bs of a damn headache! Good luck dealing with that shit.

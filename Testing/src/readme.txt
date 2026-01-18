@@ -12,10 +12,15 @@ Especially read the docs on:
 
 All technical files and links can be found there. 
 
+Also there's a caution warning of the problems 
+I encountered for the air quality sensor
+on calib.cpp, read that to work on the problem 
+I suppose. Good luck.
+
 For finding functions, refer to the .h files.
 
-most of this code was done by real human hands.
-but deepseek helped on debugging and the documentation.
+Most of this code was done by real human hands.
+But deepseek helped on debugging and the documentation.
 I aint writing allat. 
 
 Anw, Good fucking yard!
