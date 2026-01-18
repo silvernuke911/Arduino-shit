@@ -51,7 +51,6 @@
  * Assumptions:
  *  - Ambient CO2 is near baseline (~400 ppm)
  */
-
 void calibrateInitWaiting() {
 	// Wait 5 seconds to ensure device is in clean air area.
 	lcd.clear();
@@ -82,7 +81,6 @@ void calibrateInitWaiting() {
  *
  * Blocking: YES (~7 seconds)
  */
-
 void calibrateSensor() {
 	lcd.clear(); 
 	lcd.setCursor(0,0); 
@@ -139,7 +137,6 @@ void calibrateSensor() {
  *
  * Does not perform recalibration directly.
  */
-
 void checkRecalibration() {
 	unsigned long currentTime = millis();
 	if(currentTime < lastCalibrationTime) {
@@ -167,7 +164,6 @@ void checkRecalibration() {
  *
  * Blocking: YES (user-assisted)
  */
-
 void performRegularRecalibration() {
 	if(!recalibrationDue) {
 		return;
