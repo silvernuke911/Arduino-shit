@@ -11,6 +11,8 @@
  *
  * Calibration assumes a clean-air baseline of approximately 400 ppm CO2
  * equivalent, as commonly used for MQ-135 sensors.
+ * 
+ * 1.8 RS/R0 Value comes from emperical testing. See test/CO2_testing.ipynb
  *
  * Dependencies:
  *  - globals.h : shared system state (R0, timing flags, LCD, pins)
@@ -211,7 +213,7 @@ void quickRecalibrationCheck() {
 	}
 
 	float avgRs=sumRs/samples;
-	float R0calc = avgRs/2.17;
+	float R0calc = avgRs/1.8;
 	if(abs((R0calc/originalR0-1))*100>10) {
 		Serial.println("WARNING: Sensor drift!");
 	}
