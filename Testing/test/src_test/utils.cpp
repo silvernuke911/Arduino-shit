@@ -37,9 +37,12 @@ float calculatePPM(float sensor_volt) {
 	return 400.0f * pow(1.8f / ratio, 10.0f);
 }
 
-//---------------------------
-// Air Quality Assessment
-//---------------------------
+//============================================================================
+// AIR QUALITY THRESHOLDS
+//============================================================================
+// Based from this: 
+// https://www.co2meter.com/blogs/news/carbon-dioxide-indoor-levels-chart
+
 int getAirQualityLevel(float ppm) {
 	if (ppm < 450) return 0;       // GOOD
 	else if (ppm < 800) return 1;  // FAIR

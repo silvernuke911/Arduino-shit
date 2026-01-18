@@ -46,7 +46,7 @@ void calibrateSensor() {
 		Serial.print(samples);Serial.print(" samples\r");
 		delay(100);
 	}
-	
+
 	float Rs_clean = sumRs/samples;
 	R0 = Rs_clean/1.8;
 	float testPPM = calculatePPM(analogRead(CO2_analog_pin)*(5.0/1023.0));
@@ -105,5 +105,7 @@ void quickRecalibrationCheck() {
 
 	float avgRs=sumRs/samples;
 	float R0calc = avgRs/2.17;
-	if(abs((R0calc/originalR0-1))*100>10) Serial.println("WARNING: Sensor drift!");
+	if(abs((R0calc/originalR0-1))*100>10) {
+		Serial.println("WARNING: Sensor drift!");
+	}
 }
