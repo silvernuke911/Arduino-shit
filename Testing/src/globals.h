@@ -47,6 +47,12 @@ extern bool isWarningActive;
 extern bool recalibrationDue;
 extern bool skipPreheating;
 extern unsigned long lastCalibrationTime;
+extern unsigned long warningStartTime;
+
+// Buzzer control variables
+extern unsigned long buzzerTimer;
+extern bool buzzerState;      // false=OFF, true=ON
+extern bool buzzerActive;
 
 //---------------------------
 // Thresholds

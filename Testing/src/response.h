@@ -10,5 +10,8 @@ void displayNormalMessage(float ppm, String qualityText);
 void activateWarningSystem();
 void warning_buzzer();
 void deactivateWarningSystem();
+void updateBuzzer();
+void startBuzzer();
+void stopBuzzer();
 
 #endif

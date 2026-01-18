@@ -6,9 +6,9 @@
 //
 //**************************************************************************** 
 //----------------------------------------------------------------------------
-//      PLATFORM: Arduino Uno R3
-//      SENSOR:   MQ-135 Air Quality Sensor
-//      DISPLAY:  16x2 Character LCD (1602A)
+//      PLATFORM:  Arduino Uno R3
+//      SENSOR:    MQ-135 Air Quality Sensor
+//      DISPLAY:   16x2 Character LCD (1602A)
 //      ACTUATORS: SG90 Servo, Buzzer, R Status LED
 //
 //----------------------------------------------------------------------------
@@ -21,7 +21,7 @@
 //      - Serial monitor diagnostics and logging
 //      - Automatic servo manipulation
 //      - Regular recalibration every 5 mins
-//        - Readings drift and become innacurate over time, requiring regular correction.
+//         - Readings drift and become innacurate over time, requiring regular correction.
 //
 //      LIMITATIONS
 //      - 20 second MQ135 Sensor preheating at startup
@@ -56,20 +56,25 @@
 //      Warning LED-> D13   | 
 //
 //----------------------------------------------------------------------------
-//      VERSION : 1.5.4
+//		TECHNICAL REFERENCES:
+//			Read the header docs at globals.cpp
+//
+//----------------------------------------------------------------------------
+//      VERSION : 1.5.5
 //      DATE    : January 17, 2026
-//      AUTHOR  : Silvernuke911
+//      AUTHOR  : Silvernuke911 [commissioned]
 //      
 //      "Mors vincit omnia, usque ad finem vitae"
 //
 //============================================================================
-// TODO: Add manual recalibration button.
-//       Arduino house casing
-//		Stabilize signal drift (sensor readings drift from baseline over time)
-//		Cannot stay stable for a long time. Triggers the warning system 
-//      due to drift. Solution: either regular recalibration (plus rolling average)
-// 		or forced recalibration when measured R0 is stable for 1 minute and deviates
-//      from original R0 by
+// TODO: > Add manual recalibration button. For sensor drift.
+//       > Arduino house casing
+//		 > Stabilize signal drift (sensor readings drift from baseline over time)
+//		   Cannot stay stable for a long time. Triggers the warning system randomly
+//         due to drift. Solution: either regular recalibration (plus rolling average)
+// 		   or forced recalibration when measured R0 is stable for 1 minute and deviates
+//         from original R0 by 10%
+//	     > [UPDATE] I have decided to do regular recalibration every 5 mins.
 //
 //============================================================================
 
@@ -95,7 +100,7 @@ void setup() {
     displayStartupMessage();        // Display device name and group name
     performSensorPreheating();      // 20 second mandatory preheating for MQ135 Sensor
 	originalR0 = R0;				// calibrate original R0 reading for sensor.
-    calibrateInitWaiting();         // Calibration wating time for user
+    calibrateInitWaiting();         // Calibration waiting time for user
     calibrateSensor();              // Calibrate sensor
     lastCalibrationTime = millis(); // Start calibration timers
     displaySystemReady();           // user ready display
@@ -109,9 +114,11 @@ void setup() {
 
 void loop() {
     if (!isPreheated) return;                               // make sure that the MQ135 sensor is preheated
-    updatePPMReading();                                     // consistently update ppm reading
 
+    updatePPMReading();                                     // consistently update ppm reading
+	updateBuzzer();											// Update buzzer system
     static unsigned long lastProcessTime = 0;               // reset process time
+
     if (millis() - lastProcessTime >= 1000) {               // if last process time was a second ago, run subroutine below
         lastProcessTime = millis();                         // set last process time
         checkRecalibration();                               // check whether 5 mins has passed since last recalibration    
@@ -127,7 +134,7 @@ void loop() {
             performRegularRecalibration();                  // if warning systems are not running (to not interfere in emergencies)
         }                                                   // if all are satisfied, recalibrate device (assume 400-700 ppm air)
 
-        if (isAboveThreshold || (sensor_voltage 			// if ppm is above ppm danger (active )threshold or above raw sensor threshold
+        if (isAboveThreshold || (sensor_voltage 			// if ppm is above ppm danger (active) threshold or above raw sensor threshold
 					> SENSOR_VOLTAGE_THRESHOLD)) {          // (passive failsafe), the routine:
             handleWarningState(ppm, qualityText);           // activate warning systems
         } else {											// otherwise
@@ -138,4 +145,3 @@ void loop() {
 		debugSensor();										// data debugging.
     }
 }
-
