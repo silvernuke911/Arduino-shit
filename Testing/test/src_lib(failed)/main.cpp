@@ -60,7 +60,7 @@
 //			Read the header docs at globals.cpp
 //
 //----------------------------------------------------------------------------
-//      VERSION : 1.5.5
+//      VERSION : 1.6.5
 //      DATE    : January 17, 2026
 //      AUTHOR  : Silvernuke911 [commissioned]
 //      
@@ -75,6 +75,7 @@
 // 		   or forced recalibration when measured R0 is stable for 1 minute and deviates
 //         from original R0 by 10%
 //	     > [UPDATE] I have decided to do regular recalibration every 5 mins.
+//       > Just use a standard MQ135 Sensor library.
 //
 //============================================================================
 
@@ -99,7 +100,6 @@ void setup() {
     initializeSensorArray();        // Initializing sensors
     displayStartupMessage();        // Display device name and group name
     performSensorPreheating();      // 20 second mandatory preheating for MQ135 Sensor
-	originalR0 = R0;				// calibrate original R0 reading for sensor.
     calibrateInitWaiting();         // Calibration waiting time for user
     calibrateSensor();              // Calibrate sensor
     lastCalibrationTime = millis(); // Start calibration timers
@@ -128,6 +128,8 @@ void loop() {
         String qualityText = getQualityText(qualityLevel);  // turn that to text
         bool isAboveThreshold = (ppm > PPM_THRESHOLD);      // check whether the ppm level is above the set threshold (2000 ppm)
 
+        float currentPPM = mq135_sensor.getCorrectedPPM(20.0, 50.0); // Get current PPM directly from library for recalibration check
+
         if (recalibrationDue 
             && (ppm < 700) 
             && !isWarningActive) {                          // check whether regular recalibration is due, and ppm levels are safe, and 
@@ -137,8 +139,7 @@ void loop() {
         if (isAboveThreshold || (sensor_voltage 			// if ppm is above ppm danger (active) threshold or above raw sensor threshold
 					> SENSOR_VOLTAGE_THRESHOLD)) {          // (passive failsafe), the routine:
             handleWarningState(ppm, qualityText);           // activate warning systems
-        } else {
-            											// otherwise
+        } else {                                			// otherwise
             handleNormalState(ppm, qualityText);            // do normal processes (display ppm, close systems)
         }
 

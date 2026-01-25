@@ -84,49 +84,52 @@ void calibrateInitWaiting() {
  * Blocking: YES (~7 seconds)
  */
 void calibrateSensor() {
-	lcd.clear(); 
-	lcd.setCursor(0,0); 
-	lcd.print("Calibrating...");
-
-	Serial.println("Calibrating ...");
-
-	delay(2000);
-
-	float sumRs=0; 
-	int samples=50;
-	for(int i = 0; i < samples; i++){
-		int raw = analogRead(CO2_analog_pin);
-		float volt = raw*(5.0/1023.0);
-		sumRs += calculateRs(volt);
-
-		// display progress
-		lcd.setCursor(0,1);
-		if (i<10) {
-			lcd.print("0");
-		} 
-		lcd.print(i+1); 
-		lcd.print("/"); 
-		lcd.print(samples); 
-		lcd.print(" samples     ");
-
-		Serial.print(i+1);Serial.print("/");
-		Serial.print(samples);Serial.print(" samples\r");
-		delay(100);
-	}
-
-	float Rs_clean = sumRs/samples;
-	R0 = Rs_clean/1.8;
-	//R0 = Rs_clean/1.09;
-	float testPPM = calculatePPM(analogRead(CO2_analog_pin)*(5.0/1023.0));
-
-	lcd.setCursor(0,1); 
-	lcd.print("Test: "); 
-	lcd.print((int)testPPM); 
-	lcd.print(" ppm"); 
-
-	Serial.print("\nTest: ");Serial.print(testPPM,2);Serial.print(" ppm");
-	debugSensor();
-	delay(2000);
+    lcd.clear(); 
+    lcd.setCursor(0,0); 
+    lcd.print("Calibrating...");
+    
+    Serial.println("Calibrating MQ135 (library auto-calibrates)...");
+    delay(2000);  // Let sensor stabilize
+    
+    // The library auto-calibrates when we call getRZero()
+    // We'll take multiple readings to ensure stability
+    float sumRZero = 0;
+    int samples = 30;
+    
+    for(int i = 0; i < samples; i++) {
+        // Library calculates RZero automatically
+        float rzero = mq135_sensor.getRZero();
+        sumRZero += rzero;
+        
+        // Display progress
+        lcd.setCursor(0,1);
+        if (i < 10) lcd.print("0");
+        lcd.print(i+1);
+        lcd.print("/");
+        lcd.print(samples);
+        lcd.print(" samples     ");
+        
+        Serial.print(i+1); Serial.print("/");
+        Serial.print(samples); Serial.print(" samples\r");
+        delay(100);
+    }
+    
+    float avgRZero = sumRZero / samples;
+    float testPPM = mq135_sensor.getCorrectedPPM(20.0, 50.0);
+    
+    lcd.setCursor(0,1);
+    lcd.print("R0: ");
+    lcd.print((int)avgRZero);
+    lcd.print("k  PPM: ");
+    lcd.print((int)testPPM);
+    
+    Serial.print("\nCalibration complete. Avg R0 = ");
+    Serial.print(avgRZero, 2);
+    Serial.print("k, Test PPM = ");
+    Serial.println(testPPM, 1);
+    
+    debugSensor();  // Show debug info
+    delay(2000);
 }
 
 /**
@@ -168,26 +171,24 @@ void checkRecalibration() {
  * Blocking: YES (user-assisted)
  */
 void performRegularRecalibration() {
-	if(!recalibrationDue) {
-		return;
-	}
-
-	lcd.clear(); 
-	lcd.setCursor(0,0); lcd.print(" Rglr Recalib  ");
-	lcd.setCursor(0,1); lcd.print("Place clean air");
-	Serial.print("Regular recalibration due...");
-	delay(2000);
-
-	for(int i = 3; i > 0; i--){
-		lcd.setCursor(0,1); 
-		lcd.print(i); 
-		lcd.print(" seconds     "); 
-		delay(1000);
-	}
-
-	calibrateSensor();
-	lastCalibrationTime = millis(); 
-	recalibrationDue=false;
+    if(!recalibrationDue) return;
+    
+    lcd.clear(); 
+    lcd.setCursor(0,0); lcd.print(" Rglr Recalib  ");
+    lcd.setCursor(0,1); lcd.print("Place clean air");
+    Serial.println("Regular recalibration due...");
+    delay(2000);
+    
+    for(int i = 3; i > 0; i--) {
+        lcd.setCursor(0,1);
+        lcd.print(i);
+        lcd.print(" seconds     ");
+        delay(1000);
+    }
+    
+    calibrateSensor();  // Calls the updated version
+    lastCalibrationTime = millis();
+    recalibrationDue = false;
 }
 
 /**
@@ -205,19 +206,21 @@ void performRegularRecalibration() {
  * Does NOT modify R0.
  */
 void quickRecalibrationCheck() {
-	float sumRs=0; 
-	int samples=10;
-	for(int i = 0; i < samples; i++){
-		float Rs = calculateRs(analogRead(CO2_analog_pin)*(5.0/1023.0));
-		sumRs += Rs;
-		delay(100);
-	}
-
-	float avgRs=sumRs/samples;
-	float R0calc = avgRs/1.8;
-	if(abs((R0calc/originalR0-1))*100>10) {
-		Serial.println("WARNING: Sensor drift!");
-	}
+    // Take a few samples
+    float sumRZero = 0;
+    int samples = 10;
+    
+    for(int i = 0; i < samples; i++) {
+        sumRZero += mq135_sensor.getRZero();
+        delay(100);
+    }
+    
+    float avgRZero = sumRZero / samples;
+    // Note: originalR0 is no longer used since library handles R0 internally
+    // You might want to track baseline R0 separately if needed
+    
+    Serial.print("Quick check - Current R0: ");
+    Serial.println(avgRZero, 2);
 }
 
 //=======================================================================

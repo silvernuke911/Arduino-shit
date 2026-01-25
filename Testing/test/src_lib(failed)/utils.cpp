@@ -59,7 +59,7 @@
 void updatePPMReading() {
     if (millis() - lastSampleTime >= 20) {
         lastSampleTime = millis();
-        float samplePPM = calculatePPM(sensor_voltage);
+        float samplePPM = mq135_sensor.getCorrectedPPM(20.0, 50.0);
         ppmReadings[readingIndex] = samplePPM;
         readingIndex = (readingIndex + 1) % SAMPLES_PER_READING;
     }
@@ -94,71 +94,6 @@ float getAveragePPM() {
         }
     }
     return (validSamples > 0) ? sum / validSamples : 0;
-}
-
-/**
- * @brief Calculates the sensor resistance Rs from voltage reading.
- *
- * Implements the voltage divider formula to determine the MQ-135 sensor
- * resistance based on the analog voltage reading.
- *
- * Electrical model:
- *  - MQ-135 forms one leg of a voltage divider with load resistor RL
- *  - Formula derived from: Vout = Vin * (RL / (Rs + RL))
- *  - Rearranged to solve for Rs
- *
- * Parameters:
- *  @param sensor_volt - Measured analog voltage (0-5V)
- *
- * Returns:
- *  @return float - Sensor resistance Rs in kilo-ohms (kΩ)
- *
- * Formula: Rs = ((Vcc / Vout) - 1) * RL
- * Where: Vcc = 5.0V, RL = 20.0 kΩ (from datasheet)
- */
-float calculateRs(float sensor_volt) {    
-    return ((5.0 / sensor_volt) - 1.0) * RL;
-}
-
-/**
- * @brief Converts sensor resistance to CO2 concentration (PPM).
- *
- * Applies the MQ-135 transfer function to estimate CO2 concentration
- * based on the ratio of current sensor resistance to baseline resistance.
- *
- * Calibration basis:
- *  - Derived from MQ-135 datasheet response curve
- *  - Assumes 400 PPM in clean air corresponds to Rs/R0 = 1.8
- *  - Uses power law approximation for full concentration range
- *
- * Parameters:
- *  @param sensor_volt - Measured analog voltage (0-5V)
- *
- * Returns:
- *  @return float - Estimated CO2 concentration in parts per million
- *
- * Formula: PPM = 400 * (1.8 / (Rs/R0))^10
- * Where: Rs/R0 is the normalized sensor resistance
- *
- * Note: This provides a reasonable approximation but is not laboratory-grade
- *       accuracy. Regular calibration in known conditions is essential.
- */
-float calculatePPM(float sensor_volt) {
-    float Rs = calculateRs(sensor_volt);
-    float ratio = Rs / R0;
-    
-    // Old formula:
-    // return 400.0f * pow(1.8f / ratio, 10.0f);
-    
-    // New formula based on: Rs/R0 = 1.09 * (PPM/400)^(-0.255)
-    // Rearranged to: PPM = 400 * [1.09 / (Rs/R0)]^(1/0.255)
-    // Where 1/0.255 ≈ 3.9216
-    if (ratio > 0) {
-        //return 400.0f * pow(1.09f / ratio, 3.9216f);
-        return 400.0f * pow(1.8f / ratio, 10.0f);
-    } else {
-        return 0.0f;  // Avoid division by zero
-    }
 }
 
 //============================================================================
@@ -252,23 +187,21 @@ String getQualityText(int level) {
  * Note: Introduces 1-second delays between readings to allow observation.
  */
 void debugSensorValues() {
-    Serial.println("\n=== SENSOR DIAGNOSTICS ===");
-    for (int i=0; i<3; i++) {
-        int raw = analogRead(CO2_analog_pin);
-        float volt = raw * (5.0/1023.0);
-        float Rs = calculateRs(volt);
-        float ratio = Rs / R0;
-        float ppm = calculatePPM(volt);
-        Serial.print("Reading "); Serial.print(i+1);
-        Serial.print(": ADC="); Serial.print(raw);
-        Serial.print(" V="); Serial.print(volt,3);
-        Serial.print(" Rs="); Serial.print(Rs,2);
-        Serial.print("k Rs/R0="); Serial.print(ratio,3);
-        Serial.print(" PPM="); Serial.println(ppm,1);
+    Serial.println("\n=== SENSOR DIAGNOSTICS (MQ135 Library) ===");
+    for (int i = 0; i < 3; i++) {
+        float resistance = mq135_sensor.getResistance();
+        float correctedResistance = mq135_sensor.getCorrectedResistance(20.0, 50.0);
+        float rzero = mq135_sensor.getRZero();
+        float ppm = mq135_sensor.getCorrectedPPM(20.0, 50.0);
+        
+        Serial.print("Reading "); Serial.print(i + 1);
+        Serial.print(": Rs="); Serial.print(resistance, 2);
+        Serial.print("k Rs(corr)="); Serial.print(correctedResistance, 2);
+        Serial.print("k R0="); Serial.print(rzero, 2);
+        Serial.print("k PPM="); Serial.println(ppm, 1);
         delay(1000);
     }
-    Serial.println("\n=========================");
-    Serial.println();
+    Serial.println("==========================================");
 }
 
 /**
@@ -353,21 +286,24 @@ void MQ135SensorDirectData() {
  *       calculations for advanced diagnostics.
  */
 void debugSensor() {
-    float Rs = calculateRs(sensor_voltage);
-    float ppm = calculatePPM(sensor_voltage);
+    // Get values from library
+    float resistance = mq135_sensor.getResistance();
+    float correctedResistance = mq135_sensor.getCorrectedResistance(20.0, 50.0);
+    float rzero = mq135_sensor.getRZero();
+    float correctedRZero = mq135_sensor.getCorrectedRZero(20.0, 50.0);
+    float ppm_raw = mq135_sensor.getPPM();
+    float ppm_corrected = mq135_sensor.getCorrectedPPM(20.0, 50.0);
     
-    Serial.print("ADC: "); Serial.print(adc);
-    Serial.print(" | D0: "); Serial.print(d0);
-    Serial.print(" | V: "); Serial.print(sensor_voltage, 3);
-    Serial.print(" | Rs: "); Serial.print(Rs, 2);
-    Serial.print(" kΩ | R0: "); Serial.print(R0, 2);
-    Serial.print(" kΩ | PPM: "); Serial.print(ppm, 1);
+    // Optional: still read digital pin if you want
+    int d0 = digitalRead(CO2_digital_pin);
     
-    // Optional extended diagnostics (commented):
-    // Serial.print(" | PPM(shortMA): "); Serial.print(ppmMAshort, 1);
-    // Serial.print(" | PPM(longMA): "); Serial.print(ppmMAlong, 1);
-    // Serial.print(" | runningR0: "); Serial.print(runningR0, 2);
-    
+    Serial.print("D0: "); Serial.print(d0);
+    Serial.print(" | Rs: "); Serial.print(resistance, 2);
+    Serial.print("k | Rs(corr): "); Serial.print(correctedResistance, 2);
+    Serial.print("k | R0: "); Serial.print(rzero, 2);
+    Serial.print("k | R0(corr): "); Serial.print(correctedRZero, 2);
+    Serial.print("k | PPM(raw): "); Serial.print(ppm_raw, 1);
+    Serial.print(" | PPM(corr): "); Serial.print(ppm_corrected, 1);
     Serial.println();
 }
 
@@ -399,17 +335,18 @@ void debugSensor() {
  *       time-critical code sections.
  */
 void lcdDebug() {
+    // Get values from library instead of using legacy calculations
+    float resistance = mq135_sensor.getResistance();
+    float rzero = mq135_sensor.getRZero();
+    float ppm = mq135_sensor.getCorrectedPPM(20.0, 50.0);
     int adc = analogRead(CO2_analog_pin);
-    float voltage = adc * (5.0 / 1023.0);
-    float Rs = calculateRs(voltage);
-    float ppm = calculatePPM(voltage);
     
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("RS:"); lcd.print(Rs, 0);
+    lcd.print("RS:"); lcd.print(resistance, 0);
     lcd.print(" ADC:"); lcd.print(adc);
     
     lcd.setCursor(0, 1);
-    lcd.print("RO:"); lcd.print(R0, 0);
+    lcd.print("R0:"); lcd.print(rzero, 0);
     lcd.print(" PPM:"); lcd.print(ppm, 0);
 }

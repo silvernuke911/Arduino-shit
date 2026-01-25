@@ -76,25 +76,9 @@ const int d7 = 9;  // Data bit 7 on D9 [3: Pin 14]
 
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7); // LCD object with 4-bit interface
 
-//============================================================================
-// SENSOR CALIBRATION
-//============================================================================
-// Constants derived from MQ-135 datasheet characteristics [1]
-// Values assume clean air baseline of 400 ppm CO2 (standard outdoor concentration)
+// CO2 Sensor object
+MQ135 mq135_sensor(CO2_analog_pin);  // Uses Library by Phoenix1747. 
 
-float R0 = 76.63;           // Baseline sensor resistance in clean air (kOhm) [1: Fig.3]
-                            // Typical value from datasheet; calibrated at startup
-                            // Used by calculatePPM(), updated by calibrateSensor();
-const float RL = 20.0;      // Load resistance: 20 kOhm [1: Application circuit]
-                            // Standard voltage divider value for MQ-135;
-float originalR0 = 0;       // Reference R0 value from initial calibration
-                            // Used for drift detection in quickRecalibrationCheck();
-int adc = 0;                // Current ADC reading (0-1023)
-                            // Updated by MQ135SensorDirectData(), used for diagnostics;
-int d0 = 0;                 // Digital output state (HIGH/LOW)
-                            // Factory-set threshold, used as hardware failsafe;
-float sensor_voltage = 0.0; // Calculated sensor voltage (0-5V)
-                            // Computed: adc × (5.0 / 1023.0), used by calculatePPM();
 
 //============================================================================
 // Timing & sampling
@@ -154,6 +138,14 @@ bool buzzerState = false;           // Current buzzer output state (false=OFF, t
 bool buzzerActive = false;          // Buzzer pattern activation flag
                                     // Set by startBuzzer(), cleared by stopBuzzer()
 
+// Measurements of sensor data
+int adc = 0;                // Current ADC reading (0-1023)
+                            // Updated by MQ135SensorDirectData(), used for diagnostics;
+int d0 = 0;                 // Digital output state (HIGH/LOW)
+                            // Factory-set threshold, used as hardware failsafe;
+float sensor_voltage = 0.0; // Calculated sensor voltage (0-5V)
+                            // Computed: adc × (5.0 / 1023.0), used by calculatePPM();
+
 //============================================================================
 // Thresholds
 //============================================================================
@@ -167,7 +159,7 @@ const int PPM_THRESHOLD = 2000;     // CO2 concentration warning threshold (ppm)
                                     //     (We use this, can be changed to 1500 if user desires.)
                                     // Adjustable based on application requirements
 
-const float SENSOR_VOLTAGE_THRESHOLD = 1.75; // Raw voltage failsafe threshold (V)
+const float SENSOR_VOLTAGE_THRESHOLD = 1.5;  // Raw voltage failsafe threshold (V)
                                              // Provides hardware-level protection
                                              // Corresponds to ~5000 ppm equivalent
                                              // Derived from empirical testing 
